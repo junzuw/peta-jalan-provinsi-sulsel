@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Peta Jalan Sulsel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      margin-top: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Judul peta di atas -->
+  <h1>Peta Jalan Provinsi Sulawesi Selatan</h1>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var map = L.map('map').setView([-4.5, 120.0], 7);
+
+    // Base tile
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Layer grup
+    var jalanProvinsi = L.layerGroup();
+    var jalanNasional = L.layerGroup();
+
+    // Muat Jalan Umum
+    fetch('jalan-sulsel-infra.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: { color: 'blue', weight: 2 },
+          onEachFeature: function (feature, layer) {
+            if (feature.properties) {
+              let info = '';
+              for (let key in feature.properties) {
+                info += `<strong>${key}:</strong> ${feature.properties[key]}<br>`;
+              }
+              layer.bindPopup(info);
+            }
+          }
+        }).addTo(jalanProvinsi);
+        jalanProvinsi.addTo(map); // default aktif
+      });
+
+    // Muat Jalan Nasional
+    fetch('jalan-nasional-sulsel-infra.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: { color: 'red', weight: 3 },
+          onEachFeature: function (feature, layer) {
+            if (feature.properties) {
+              let info = '';
+              for (let key in feature.properties) {
+                info += `<strong>${key}:</strong> ${feature.properties[key]}<br>`;
+              }
+              layer.bindPopup(info);
+            }
+          }
+        }).addTo(jalanNasional);
+      });
+
+    // Toggle layer
+    var overlayMaps = {
+      "Jalan Provinsi": jalanProvinsi,
+      "Jalan Nasional": jalanNasional
+    };
+    L.control.layers(null, overlayMaps, {collapsed: false}).addTo(map);
+
+    // 📍 Tambahkan fitur lokasi pengguna
+    map.locate({setView: true, maxZoom: 16});
+
+    function onLocationFound(e) {
+      var radius = e.accuracy / 2;
+
+      L.marker(e.latlng).addTo(map)
+        .bindPopup("Anda berada di sini").openPopup();
+
+      L.circle(e.latlng, radius).addTo(map);
+    }
+
+    map.on('locationfound', onLocationFound);
+
+    map.on('locationerror', function(e) {
+      alert("Lokasi tidak dapat ditemukan.");
+    });
+  </script>
+</body>
+</html>
